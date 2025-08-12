@@ -27,7 +27,8 @@ Real-time private chat with approved friends (Socket.io).
 Search functionality to find students by name or department.
 
 6. Target Users / Audience
-Students and faculty of [Your College Name].
+
+Students and faculty of NEWTON SCHOOL OF TECHNOLOGY.
 
 7. Technology Stack
 
