@@ -1,13 +1,17 @@
 1. Project Title
+
 NSTCONNECT – A College-Only Social Networking Platform
 
 2. Your Name & Roll Number
+
 Aditya Bijalwan – 2024-B-07062006A
 
 3. Problem Statement
+
 In many colleges, there is no dedicated platform for students to connect socially and professionally within the campus community. Communication often happens across scattered WhatsApp groups, Instagram pages, or informal chats, making it hard to discover peers, share updates, or maintain meaningful connections. A centralized, secure, and college-exclusive platform can improve networking, collaboration, and communication among students.
 
 4. Proposed Solution / Idea
+
 A web and mobile application exclusively for our college where students can create profiles, send and accept friend requests, post updates, and chat in real time with their approved friends. This platform will centralize campus connections, making it easier for students to network, share updates, and stay engaged with peers.
 
 5. Key Features
