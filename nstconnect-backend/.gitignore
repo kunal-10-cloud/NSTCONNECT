@@ -5,3 +5,4 @@ dist/
 coverage/
 
 /generated/prisma
+.env
