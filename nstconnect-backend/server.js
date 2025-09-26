@@ -69,3 +69,71 @@ app.get('/api/profile', authMiddleware, async(req,res)=>{
     })
     res.json(user)
 })
+
+app.post('/api/friends/request/:receiverId', authMiddleware, async(req,res) => {
+    const { receiverId } = req.params; 
+    if (parse(req.userId) === receiverId){
+        return res.status(400).json({ err: 'Cannot send request to yourself'})
+    }
+
+    const existing = await prisma.friendRequest.findFirst({
+        where:{
+            senderId: req.userId, 
+            receiverId: parseInt(receiverId),
+            status: 'PENDING'
+        }
+    });
+
+    if (existing){
+        return res.status(400).json({ err: 'Request already sent'})
+    }
+
+    const request = await prisma.friendRequest.create({
+        data:{
+            senderId: req.userId,
+            receiverId: parseInt(receiverId)
+        },
+    });
+    res.send(request)
+})
+
+
+
+app.post('/api/friends/accept/:requestId', authMiddleware, async(req,res)=>{
+    const { requestId } = req.params; 
+    const request = await prisma.friendRequest.findUnique({
+        where: { id: parseInt(requestId) }
+    });
+    if(!request || request.receiverId !== req.userId){
+        return res.status(400).json({ err: 'Invalid request'})
+    }
+    if (request.status !== 'PENDING'){
+        return res.status(400).json({ err: 'Request already processed'})
+    }
+
+    await prisma.friendRequest.update({
+        where: {id: request.id },
+        data: {status: 'ACCEPTED'}
+    })
+
+    await prisma.friend.createMany({
+        data:[
+            { userId: request.senderId, friendId: request.receiverId },
+            { userId: request.receiverId, friendId: request.senderId }
+        ],
+    });
+    res.json({ message: 'Friend request accepted'})
+})
+
+
+app.get('/api/friends', authMiddleware, async(req,res)=>{
+    const friends = await prisma.friend.findMany({
+        where: {userId: req.userId},
+        include: {friend: true}
+    });
+    res.json(friends.map(f=> f.friend))
+})
+
+app.listen(PORT, ()=>{
+    console.log(`Server running on port ${PORT}`);
+})
