@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -14,19 +11,77 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User{
-  id Int @id @default(autoincrement())
-  name String 
-  email String @unique
-  password String
-  department String?
-  profilePic String?
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  password        String
+  department      String?
+  bio             String?   @db.Text
+  headline        String?
+  skills          String?   // Comma separated string or JSON
+  graduationYear  Int?
+  profilePic      String?
+  linkedinUrl     String?
+  githubUrl       String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  sentRequests     FriendRequest[] @relation("sent")
+  receivedRequests FriendRequest[] @relation("received")
+  friends          Friend[]        @relation("userFriends")
+  friendOf         Friend[]        @relation("FriendUsers")
+  
+  posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+  
+  sentMessages     Message[]       @relation("sentMessages")
+  receivedMessages Message[]       @relation("receivedMessages")
+  
+  notifications    Notification[]
+  
+  groups           GroupMember[]
+  createdGroups    Group[]         @relation("GroupCreator")
+}
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  content   String?   @db.Text
+  image     String?
+  authorId  Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  author    User      @relation(fields: [authorId], references: [id])
+  comments  Comment[]
+  likes     Like[]
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  postId    Int
+  authorId  Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  sentRequests FriendRequest[] @relation("sent")
-  receivedRequests FriendRequest[] @relation("received")
-  friends Friend[] @relation("userFriends")
-  friendOf Friend[] @relation("FriendUsers")
+
+  post      Post     @relation(fields: [postId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId]) // Prevent duplicate likes
 }
 
 enum RequestStatus {
@@ -36,22 +91,87 @@ enum RequestStatus {
 }
 
 model FriendRequest {
-  id Int @id @default(autoincrement())
-  senderId Int 
-  receiverId Int 
-  status RequestStatus @default(PENDING)
-  createdAt DateTime @default(now())
-  sender   User @relation("sent", fields: [senderId], references: [id])
-  receiver User @relation("received", fields: [receiverId], references: [id])
-
+  id         Int           @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  status     RequestStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  
+  sender     User          @relation("sent", fields: [senderId], references: [id])
+  receiver   User          @relation("received", fields: [receiverId], references: [id])
+  
+  @@unique([senderId, receiverId])
 }
 
 model Friend {
-  id Int @id @default(autoincrement())
-  userId Int
-  friendId Int
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  friendId  Int
   createdAt DateTime @default(now())
-  user   User @relation("userFriends", fields: [userId], references: [id])
-  friend User @relation("FriendUsers", fields: [friendId], references: [id])
+  
+  user      User     @relation("userFriends", fields: [userId], references: [id])
+  friend    User     @relation("FriendUsers", fields: [friendId], references: [id])
 
+  @@unique([userId, friendId])
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  content    String   @db.Text
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  sender     User     @relation("sentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("receivedMessages", fields: [receiverId], references: [id])
+}
+
+enum NotificationType {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  LIKE
+  COMMENT
+  GROUP_INVITE
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  type        NotificationType
+  referenceId Int?             // ID of related entity (e.g., PostId, FriendRequestId)
+  message     String
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  
+  user        User             @relation(fields: [userId], references: [id])
+}
+
+model Group {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?       @db.Text
+  creatorId   Int
+  createdAt   DateTime      @default(now())
+  
+  creator     User          @relation("GroupCreator", fields: [creatorId], references: [id])
+  members     GroupMember[]
+}
+
+enum GroupRole {
+  ADMIN
+  MEMBER
+}
+
+model GroupMember {
+  id        Int       @id @default(autoincrement())
+  groupId   Int
+  userId    Int
+  role      GroupRole @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+  
+  group     Group     @relation(fields: [groupId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
 }
