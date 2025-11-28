@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import api from '../../services/api';
 import { colors, spacing, typography, shadows } from '../../theme';
 
@@ -9,20 +10,92 @@ const UserProfileScreen = ({ route, navigation }) => {
     const { userId } = route.params;
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [sendingRequest, setSendingRequest] = useState(false);
 
-    useEffect(() => {
-        const fetchUserProfile = async () => {
-            try {
-                const response = await api.get(`/users/${userId}`);
-                setProfile(response.data);
-            } catch (error) {
-                console.error('Error fetching user profile:', error);
-            } finally {
-                setLoading(false);
+    const fetchUserProfile = async () => {
+        try {
+            const response = await api.get(`/users/${userId}`);
+            setProfile(response.data);
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchUserProfile();
+        }, [userId])
+    );
+
+    const handleSendRequest = async () => {
+        setSendingRequest(true);
+        try {
+            await api.post(`/friends/request/${userId}`);
+            Alert.alert('Success', 'Connection request sent!');
+            // Refresh profile to update button state
+            fetchUserProfile();
+        } catch (error) {
+            console.error('Error sending friend request:', error);
+            const errorMessage = error.response?.data?.error || 'Failed to send connection request';
+            Alert.alert('Error', errorMessage);
+        } finally {
+            setSendingRequest(false);
+        }
+    };
+
+    const renderConnectionButton = () => {
+        if (!profile) return null;
+
+        if (profile.isFriend) {
+            // Already friends
+            return (
+                <TouchableOpacity style={styles.connectedButton} disabled>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                    <Text style={styles.connectedButtonText}>Connected</Text>
+                </TouchableOpacity>
+            );
+        }
+
+        if (profile.hasPendingRequest) {
+            // Pending request
+            if (profile.requestSentByMe) {
+                return (
+                    <TouchableOpacity style={styles.pendingButton} disabled>
+                        <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
+                        <Text style={styles.pendingButtonText}>Pending</Text>
+                    </TouchableOpacity>
+                );
+            } else {
+                // They sent you a request - show in notifications
+                return (
+                    <TouchableOpacity style={styles.pendingButton} disabled>
+                        <Ionicons name="mail-outline" size={20} color={colors.primary} />
+                        <Text style={styles.pendingButtonText}>Request Received</Text>
+                    </TouchableOpacity>
+                );
             }
-        };
-        fetchUserProfile();
-    }, [userId]);
+        }
+
+        // Not friends, no pending request
+        return (
+            <TouchableOpacity
+                style={styles.connectButton}
+                onPress={handleSendRequest}
+                disabled={sendingRequest}
+            >
+                {sendingRequest ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                    <>
+                        <Ionicons name="person-add" size={20} color={colors.white} />
+                        <Text style={styles.connectButtonText}>Connect</Text>
+                    </>
+                )}
+            </TouchableOpacity>
+        );
+    };
 
     if (loading) {
         return (
@@ -65,6 +138,11 @@ const UserProfileScreen = ({ route, navigation }) => {
                             <Text style={styles.statCount}>{profile._count?.posts || 0}</Text>
                             <Text style={styles.statLabel}>Posts</Text>
                         </View>
+                    </View>
+
+                    {/* Connection Button */}
+                    <View style={styles.actionButtonContainer}>
+                        {renderConnectionButton()}
                     </View>
 
                     {profile.bio && (
@@ -190,6 +268,61 @@ const styles = StyleSheet.create({
         ...typography.caption,
         color: colors.textSecondary,
         marginTop: 2,
+    },
+    actionButtonContainer: {
+        marginBottom: spacing.m,
+    },
+    connectButton: {
+        backgroundColor: colors.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: spacing.s,
+        paddingHorizontal: spacing.m,
+        borderRadius: 8,
+        gap: spacing.xs,
+    },
+    connectButtonText: {
+        color: colors.white,
+        fontWeight: '600',
+        fontSize: 16,
+        marginLeft: spacing.xs,
+    },
+    connectedButton: {
+        backgroundColor: colors.white,
+        borderWidth: 2,
+        borderColor: colors.success,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: spacing.s,
+        paddingHorizontal: spacing.m,
+        borderRadius: 8,
+        gap: spacing.xs,
+    },
+    connectedButtonText: {
+        color: colors.success,
+        fontWeight: '600',
+        fontSize: 16,
+        marginLeft: spacing.xs,
+    },
+    pendingButton: {
+        backgroundColor: colors.white,
+        borderWidth: 2,
+        borderColor: colors.lightGray,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: spacing.s,
+        paddingHorizontal: spacing.m,
+        borderRadius: 8,
+        gap: spacing.xs,
+    },
+    pendingButtonText: {
+        color: colors.textSecondary,
+        fontWeight: '600',
+        fontSize: 16,
+        marginLeft: spacing.xs,
     },
     section: {
         marginTop: spacing.m,

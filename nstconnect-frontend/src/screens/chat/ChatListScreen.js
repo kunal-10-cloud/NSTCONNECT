@@ -1,26 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import api from '../../services/api';
 import { colors, spacing, typography, shadows } from '../../theme';
 
 const ChatListScreen = ({ navigation }) => {
-    const [conversations, setConversations] = useState([]);
+    const [friends, setFriends] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchConversations = async () => {
-            try {
-                const response = await api.get('/messages/conversations');
-                setConversations(response.data);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchConversations();
-    }, []);
+    const fetchFriends = async () => {
+        try {
+            // For MVP, we'll just show all friends. 
+            // Ideally, we'd merge this with recent conversations.
+            const response = await api.get('/friends');
+            setFriends(response.data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchFriends();
+        }, [])
+    );
 
     const renderItem = ({ item }) => (
         <TouchableOpacity
@@ -33,7 +39,10 @@ const ChatListScreen = ({ navigation }) => {
             />
             <View style={styles.content}>
                 <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.preview}>Tap to chat</Text>
+                <Text style={styles.preview}>{item.headline || 'Tap to chat'}</Text>
+            </View>
+            <View style={styles.arrow}>
+                <Text style={styles.arrowText}>›</Text>
             </View>
         </TouchableOpacity>
     );
@@ -48,13 +57,19 @@ const ChatListScreen = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Messages</Text>
+            </View>
             <FlatList
-                data={conversations}
+                data={friends}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
-                    <Text style={styles.emptyText}>No conversations yet</Text>
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No connections yet.</Text>
+                        <Text style={styles.emptySubText}>Connect with people to start chatting!</Text>
+                    </View>
                 }
             />
         </SafeAreaView>
@@ -65,6 +80,15 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
+    },
+    header: {
+        padding: spacing.m,
+        backgroundColor: colors.white,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.lightGray,
+    },
+    headerTitle: {
+        ...typography.h2,
     },
     centered: {
         flex: 1,
@@ -80,7 +104,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         padding: spacing.m,
         marginBottom: spacing.s,
-        borderRadius: 8,
+        borderRadius: 12,
         ...shadows.small,
     },
     avatar: {
@@ -95,13 +119,31 @@ const styles = StyleSheet.create({
     name: {
         ...typography.h3,
         fontSize: 16,
+        marginBottom: 2,
     },
     preview: {
-        ...typography.bodySmall,
+        ...typography.caption,
+        color: colors.textSecondary,
+    },
+    arrow: {
+        justifyContent: 'center',
+    },
+    arrowText: {
+        fontSize: 24,
+        color: colors.gray,
+        fontWeight: 'bold',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: spacing.xl,
     },
     emptyText: {
-        textAlign: 'center',
-        marginTop: spacing.xl,
+        ...typography.h3,
+        color: colors.text,
+        marginBottom: spacing.s,
+    },
+    emptySubText: {
+        ...typography.body,
         color: colors.textSecondary,
     },
 });

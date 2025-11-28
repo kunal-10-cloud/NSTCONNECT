@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows } from '../theme';
 
@@ -7,6 +7,16 @@ const PostCard = ({ post, onLike, onComment, navigation }) => {
     const handleUserPress = () => {
         if (navigation && post.author?.id) {
             navigation.navigate('UserProfile', { userId: post.author.id });
+        }
+    };
+
+    const handleShare = async () => {
+        try {
+            await Share.share({
+                message: `Check out this post by ${post.author.name}: ${post.content}`,
+            });
+        } catch (error) {
+            console.error(error.message);
         }
     };
 
@@ -47,7 +57,7 @@ const PostCard = ({ post, onLike, onComment, navigation }) => {
                     <Text style={styles.actionText}>Comment</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
                     <Ionicons name="share-social-outline" size={22} color={colors.textSecondary} />
                     <Text style={styles.actionText}>Share</Text>
                 </TouchableOpacity>

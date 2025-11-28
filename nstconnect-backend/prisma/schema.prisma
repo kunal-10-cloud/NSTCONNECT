@@ -21,7 +21,7 @@ model User {
   headline        String?
   skills          String?   // Comma separated string or JSON
   graduationYear  Int?
-  profilePic      String?
+  profilePic      String?   @db.LongText
   linkedinUrl     String?
   githubUrl       String?
   
@@ -50,7 +50,7 @@ model User {
 model Post {
   id        Int       @id @default(autoincrement())
   content   String?   @db.Text
-  image     String?
+  image     String?   @db.LongText
   authorId  Int
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

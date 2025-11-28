@@ -19,24 +19,41 @@ const MainTab = () => {
                 tabBarActiveTintColor: colors.primary,
                 tabBarInactiveTintColor: colors.gray,
                 tabBarIcon: ({ focused, color, size }) => {
-                    const isFocused = Boolean(focused);
                     let iconName;
 
                     if (route.name === 'Feed') {
-                        iconName = isFocused ? 'home' : 'home-outline';
+                        iconName = focused ? 'home' : 'home-outline';
                     } else if (route.name === 'Search') {
-                        iconName = isFocused ? 'search' : 'search-outline';
+                        iconName = focused ? 'search' : 'search-outline';
                     } else if (route.name === 'Post') {
-                        iconName = isFocused ? 'add-circle' : 'add-circle-outline';
+                        iconName = 'add-circle';
+                        size = 32; // Make the post icon larger
                     } else if (route.name === 'Messages') {
-                        iconName = isFocused ? 'chatbubbles' : 'chatbubbles-outline';
+                        iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
                     } else if (route.name === 'Notifications') {
-                        iconName = isFocused ? 'notifications' : 'notifications-outline';
+                        iconName = focused ? 'notifications' : 'notifications-outline';
                     } else if (route.name === 'Profile') {
-                        iconName = isFocused ? 'person' : 'person-outline';
+                        iconName = focused ? 'person' : 'person-outline';
                     }
 
-                    return <Ionicons name={iconName} size={Number(size) || 24} color={color} />;
+                    return <Ionicons name={iconName} size={size} color={color} />;
+                },
+                tabBarStyle: {
+                    borderTopWidth: 1,
+                    borderTopColor: colors.lightGray,
+                    height: 60,
+                    paddingBottom: 8,
+                    paddingTop: 8,
+                    backgroundColor: colors.white,
+                    elevation: 8,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                },
+                tabBarLabelStyle: {
+                    fontSize: 10,
+                    fontWeight: '500',
                 },
             })}
         >

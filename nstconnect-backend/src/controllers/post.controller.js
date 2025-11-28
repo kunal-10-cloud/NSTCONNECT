@@ -3,6 +3,10 @@ const prisma = require("../utils/prisma");
 exports.createPost = async (req, res) => {
     const { content, image } = req.body;
     try {
+        console.log('[createPost] User', req.userId, 'creating post');
+        console.log('[createPost] Content length:', content?.length || 0);
+        console.log('[createPost] Has image:', !!image);
+
         const post = await prisma.post.create({
             data: {
                 content,
@@ -11,9 +15,16 @@ exports.createPost = async (req, res) => {
             },
             include: { author: { select: { id: true, name: true, profilePic: true, headline: true } } }
         });
+
+        console.log('[createPost] Post created successfully:', post.id);
         res.json(post);
     } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
+        console.error('[createPost] Error:', {
+            userId: req.userId,
+            error: error.message,
+            stack: error.stack
+        });
+        res.status(500).json({ error: "Internal server error", details: error.message });
     }
 };
 

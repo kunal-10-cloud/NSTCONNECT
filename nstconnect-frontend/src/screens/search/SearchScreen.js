@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
@@ -9,6 +9,7 @@ const SearchScreen = ({ navigation }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [sendingRequests, setSendingRequests] = useState(new Set());
 
     const searchUsers = async (text) => {
         setQuery(text);
@@ -29,16 +30,67 @@ const SearchScreen = ({ navigation }) => {
     };
 
     const sendRequest = async (userId) => {
+        setSendingRequests(prev => new Set(prev).add(userId));
         try {
             await api.post(`/friends/request/${userId}`);
-            alert('Request sent!');
+            Alert.alert('Success', 'Connection request sent!');
+            // Refresh search results to update button state
+            searchUsers(query);
         } catch (error) {
-            alert('Failed to send request');
+            console.error('Error sending request:', error);
+            const errorMessage = error.response?.data?.error || 'Failed to send connection request';
+            Alert.alert('Error', errorMessage);
+        } finally {
+            setSendingRequests(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(userId);
+                return newSet;
+            });
         }
     };
 
     const handleUserPress = (userId) => {
         navigation.navigate('UserProfile', { userId });
+    };
+
+    const renderConnectionButton = (item) => {
+        const isSending = sendingRequests.has(item.id);
+
+        if (item.isFriend) {
+            // Already friends - show checkmark, disabled
+            return (
+                <TouchableOpacity style={styles.connectedButton} disabled>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                </TouchableOpacity>
+            );
+        }
+
+        if (item.hasPendingRequest) {
+            // Pending request - show clock icon, disabled
+            return (
+                <TouchableOpacity style={styles.pendingButton} disabled>
+                    <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+            );
+        }
+
+        // Not friends, no pending request - show add button
+        return (
+            <TouchableOpacity
+                style={styles.connectButton}
+                onPress={(e) => {
+                    e.stopPropagation();
+                    sendRequest(item.id);
+                }}
+                disabled={isSending}
+            >
+                {isSending ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                    <Ionicons name="person-add" size={20} color={colors.primary} />
+                )}
+            </TouchableOpacity>
+        );
     };
 
     const renderItem = ({ item }) => (
@@ -54,15 +106,7 @@ const SearchScreen = ({ navigation }) => {
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.headline}>{item.headline || item.department}</Text>
             </View>
-            <TouchableOpacity
-                style={styles.connectButton}
-                onPress={(e) => {
-                    e.stopPropagation();
-                    sendRequest(item.id);
-                }}
-            >
-                <Ionicons name="person-add" size={20} color={colors.primary} />
-            </TouchableOpacity>
+            {renderConnectionButton(item)}
         </TouchableOpacity>
     );
 
@@ -148,6 +192,14 @@ const styles = StyleSheet.create({
     },
     connectButton: {
         padding: spacing.s,
+    },
+    connectedButton: {
+        padding: spacing.s,
+        opacity: 0.6,
+    },
+    pendingButton: {
+        padding: spacing.s,
+        opacity: 0.6,
     },
     emptyText: {
         textAlign: 'center',

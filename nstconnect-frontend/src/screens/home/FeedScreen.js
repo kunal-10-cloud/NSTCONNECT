@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../../services/api';
 import PostCard from '../../components/PostCard';
-import { colors } from '../../theme';
+import { colors, spacing, typography, shadows } from '../../theme';
 
 const FeedScreen = ({ navigation }) => {
     const [posts, setPosts] = useState([]);
@@ -40,7 +41,9 @@ const FeedScreen = ({ navigation }) => {
 
     const handleLike = async (postId) => {
         try {
+            console.log(`[FeedScreen] Attempting to like post ${postId}`);
             await api.post(`/posts/${postId}/like`);
+            console.log(`[FeedScreen] Successfully liked post ${postId}`);
             // Optimistic update
             setPosts(currentPosts =>
                 currentPosts.map(post => {
@@ -59,14 +62,19 @@ const FeedScreen = ({ navigation }) => {
                 })
             );
         } catch (error) {
-            console.error('Like error:', error);
+            console.error('[FeedScreen] Like error:', {
+                postId,
+                error: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+            });
+            alert('Failed to like post. Please try again.');
             fetchPosts(); // Revert on error
         }
     };
 
     const handleComment = (postId) => {
-        // Navigate to comment screen (to be implemented)
-        console.log('Comment on', postId);
+        navigation.navigate('Comments', { postId });
     };
 
     if (loading) {
@@ -79,6 +87,17 @@ const FeedScreen = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
+            <View style={styles.header}>
+                <View style={styles.logoContainer}>
+                    <View style={styles.logoIcon}>
+                        <Text style={styles.logoIconText}>N</Text>
+                    </View>
+                    <Text style={styles.logoText}>NST Connect</Text>
+                </View>
+                <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+                    <Ionicons name="notifications-outline" size={24} color={colors.text} />
+                </TouchableOpacity>
+            </View>
             <FlatList
                 data={posts}
                 keyExtractor={(item) => item.id.toString()}
@@ -112,6 +131,41 @@ const styles = StyleSheet.create({
     },
     list: {
         paddingVertical: 8,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.m,
+        paddingVertical: spacing.s,
+        backgroundColor: colors.white,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.lightGray,
+        ...shadows.small,
+        zIndex: 1,
+    },
+    logoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    logoIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.s,
+    },
+    logoIconText: {
+        color: colors.white,
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    logoText: {
+        ...typography.h2,
+        color: colors.primary,
+        fontSize: 20,
     },
 });
 
