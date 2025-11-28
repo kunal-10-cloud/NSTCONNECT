@@ -36,14 +36,19 @@ exports.sendRequest = async (req, res) => {
             }
         });
 
-        await prisma.notification.create({
-            data: {
-                userId: receiverIdInt,
-                type: 'FRIEND_REQUEST',
-                referenceId: request.id,
-                message: 'You have a new connection request'
-            }
-        });
+        try {
+            await prisma.notification.create({
+                data: {
+                    userId: receiverIdInt,
+                    type: 'FRIEND_REQUEST',
+                    referenceId: request.id,
+                    message: 'You have a new connection request'
+                }
+            });
+        } catch (notifError) {
+            console.error('Failed to create notification:', notifError);
+            // Continue execution even if notification fails
+        }
 
         res.json(request);
     } catch (error) {
@@ -63,6 +68,25 @@ exports.acceptRequest = async (req, res) => {
         }
         if (request.status !== 'PENDING') {
             return res.status(400).json({ error: 'Request already processed' });
+        }
+
+        // Check if friendship already exists
+        const existingFriendship = await prisma.friend.findFirst({
+            where: {
+                OR: [
+                    { userId: request.senderId, friendId: request.receiverId },
+                    { userId: request.receiverId, friendId: request.senderId }
+                ]
+            }
+        });
+
+        if (existingFriendship) {
+            // Just update the request status, friendship already exists
+            await prisma.friendRequest.update({
+                where: { id: request.id },
+                data: { status: 'ACCEPTED' }
+            });
+            return res.json({ message: 'Friend request accepted' });
         }
 
         await prisma.$transaction([
@@ -88,6 +112,33 @@ exports.acceptRequest = async (req, res) => {
 
         res.json({ message: 'Friend request accepted' });
     } catch (error) {
+        console.error('Error accepting friend request:', error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.rejectRequest = async (req, res) => {
+    const { requestId } = req.params;
+    try {
+        const request = await prisma.friendRequest.findUnique({
+            where: { id: parseInt(requestId) }
+        });
+
+        if (!request || request.receiverId !== req.userId) {
+            return res.status(400).json({ error: 'Invalid request' });
+        }
+        if (request.status !== 'PENDING') {
+            return res.status(400).json({ error: 'Request already processed' });
+        }
+
+        await prisma.friendRequest.update({
+            where: { id: request.id },
+            data: { status: 'REJECTED' }
+        });
+
+        res.json({ message: 'Friend request rejected' });
+    } catch (error) {
+        console.error('Error rejecting friend request:', error);
         res.status(500).json({ error: "Internal server error" });
     }
 };

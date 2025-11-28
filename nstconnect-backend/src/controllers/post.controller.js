@@ -50,6 +50,7 @@ exports.getFeed = async (req, res) => {
 exports.likePost = async (req, res) => {
     const { id } = req.params;
     try {
+        console.log(`[likePost] User ${req.userId} attempting to like post ${id}`);
         const existingLike = await prisma.like.findUnique({
             where: {
                 postId_userId: {
@@ -63,6 +64,7 @@ exports.likePost = async (req, res) => {
             await prisma.like.delete({
                 where: { id: existingLike.id }
             });
+            console.log(`[likePost] User ${req.userId} unliked post ${id}`);
             return res.json({ message: "Unliked" });
         } else {
             await prisma.like.create({
@@ -85,10 +87,17 @@ exports.likePost = async (req, res) => {
                 });
             }
 
+            console.log(`[likePost] User ${req.userId} liked post ${id}`);
             return res.json({ message: "Liked" });
         }
     } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
+        console.error('[likePost] Error:', {
+            postId: id,
+            userId: req.userId,
+            error: error.message,
+            stack: error.stack
+        });
+        res.status(500).json({ error: "Internal server error", details: error.message });
     }
 };
 
@@ -96,6 +105,7 @@ exports.commentPost = async (req, res) => {
     const { id } = req.params;
     const { content } = req.body;
     try {
+        console.log(`[commentPost] User ${req.userId} commenting on post ${id}`);
         const comment = await prisma.comment.create({
             data: {
                 content,
@@ -118,9 +128,16 @@ exports.commentPost = async (req, res) => {
             });
         }
 
+        console.log(`[commentPost] Comment created successfully on post ${id}`);
         res.json(comment);
     } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
+        console.error('[commentPost] Error:', {
+            postId: id,
+            userId: req.userId,
+            error: error.message,
+            stack: error.stack
+        });
+        res.status(500).json({ error: "Internal server error", details: error.message });
     }
 };
 

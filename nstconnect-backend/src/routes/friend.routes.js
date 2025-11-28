@@ -5,6 +5,7 @@ const authMiddleware = require("../middlewares/auth.middleware");
 
 router.post("/request/:receiverId", authMiddleware, friendController.sendRequest);
 router.post("/accept/:requestId", authMiddleware, friendController.acceptRequest);
+router.post("/reject/:requestId", authMiddleware, friendController.rejectRequest);
 router.get("/", authMiddleware, friendController.getFriends);
 router.get("/requests", authMiddleware, friendController.getRequests);
 
